@@ -1,0 +1,5 @@
+# Portable reconstruction: paper GATK 4.1.2.0; behavior may differ.
+channels: [conda-forge, bioconda, nodefaults]
+dependencies:
+  - python=3.11
+  - gatk4=4.5.0.0

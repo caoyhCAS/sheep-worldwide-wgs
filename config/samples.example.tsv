@@ -1,0 +1,3 @@
+sample	r1	r2	mean_depth
+EXAMPLE_1	data/fastq/EXAMPLE_1_R1.fastq.gz	data/fastq/EXAMPLE_1_R2.fastq.gz	20.0
+EXAMPLE_2	data/fastq/EXAMPLE_2_R1.fastq.gz	data/fastq/EXAMPLE_2_R2.fastq.gz	9.0

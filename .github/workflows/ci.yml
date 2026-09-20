@@ -1,0 +1,30 @@
+name: Reconstruction checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install orchestration and test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Compile reconstructed Python code
+        run: python -m compileall -q scripts workflow/scripts tests
+      - name: Unit tests and synthetic real-module DAG checks
+        run: python -m pytest -q
+      - name: Demo DAG dry run
+        run: snakemake --snakefile workflow/Snakefile --configfile config/config.test.yaml --dry-run --cores 1
+      - name: Execute synthetic demo
+        run: snakemake --snakefile workflow/Snakefile --configfile config/config.test.yaml --cores 1
+      - name: Verify expected demonstration outputs
+        run: python scripts/check_demo.py

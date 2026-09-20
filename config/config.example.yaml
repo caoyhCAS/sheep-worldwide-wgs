@@ -1,0 +1,45 @@
+# Method-based reconstruction, NOT the authors' original code.
+# Copy and edit this file; null values intentionally block undocumented choices.
+# Start from existing PASS SNP data with [population, selection], or use [wgs].
+modules: [population, selection]
+threads: 8
+reference:
+  fasta: resources/reference/Oar_rambouillet_v1.0.fa
+  dict: resources/reference/Oar_rambouillet_v1.0.dict
+wgs:
+  samples: config/samples.example.tsv
+  # A list of complete Trimmomatic operation tokens, including adaptor path if used.
+  # Trimming thresholds/adaptors are not reported in the paper. No defaults invented.
+  trimmomatic_steps: null
+  # Choose pass or fail after reviewing absent annotation handling in GATK JEXL.
+  missing_annotation_policy: null
+analysis:
+  vcf: data/cohort.pass.snps.vcf.gz
+  # Two tab-separated columns old_contig new_contig; identity rows are permitted.
+  # All labels retained by autosomes below must map to numeric 1..26 for PLINK.
+  contig_map: data/contig_map.tsv
+  autosomes: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26"]
+  populations: config/populations.example.tsv
+population:
+  # No header; FID IID with FID=IID=VCF sample ID. Supply an explicitly curated
+  # unrelated cohort after KING >0.0884 review; removal tie-breaking is unreported.
+  unrelated_keep: data/unrelated.keep
+  roh:
+    enabled: false
+    # Paper --homozyg-window-kb 200 is not documented in current PLINK 1.9.
+    # Do not silently replace it with --homozyg-kb 200 (a different parameter).
+    resolution_note: null
+    resolved_args: null
+  ld:
+    enabled: false
+    # When enabled, each populations TSV row needs ld_keep: exactly 3 individuals.
+    # Save the sampling seed/selection procedure in your run records.
+selection:
+  # Both sections: 50 kb windows. Methods: 10 kb step; Results: 25 kb step.
+  fst_window_bp: 50000
+  fst_step_bp: null
+  fst_step_resolution: null
+  # The paper describes scans across 158 populations; use all manifest populations.
+  global_fst: true
+  comparisons:
+    improved_vs_landraces: [improved, landraces]

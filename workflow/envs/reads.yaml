@@ -1,0 +1,6 @@
+# Portable reconstruction; FastQC matches paper, Trimmomatic is newer than 0.36.
+channels: [conda-forge, bioconda, nodefaults]
+dependencies:
+  - python=3.11
+  - fastqc=0.11.9
+  - trimmomatic=0.39

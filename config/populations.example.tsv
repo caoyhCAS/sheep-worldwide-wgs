@@ -1,0 +1,3 @@
+population	keep	ld_keep
+improved	data/populations/improved.txt	data/populations/improved.ld3.txt
+landraces	data/populations/landraces.txt	data/populations/landraces.ld3.txt

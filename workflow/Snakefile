@@ -1,0 +1,133 @@
+"""Method-based reconstruction of MBE msab353; not the historical author code."""
+import csv
+import math
+import re
+import shlex
+import sys
+from pathlib import Path
+
+configfile: "config/config.test.yaml"
+
+sys.path.insert(0, str(Path(workflow.basedir) / "scripts"))
+from config_helpers import required, manifest, safe_name, positive_integer
+from validate_cohort import read_ids
+
+MODULES = config.get("modules", ["demo"])
+if not isinstance(MODULES, list) or not MODULES:
+    raise ValueError("modules must be a nonempty list")
+unknown = set(MODULES) - {"demo", "wgs", "population", "selection"}
+if unknown:
+    raise ValueError(f"Unknown modules: {sorted(unknown)}")
+TARGETS = []
+THREADS = positive_integer(config.get("threads", 4), "threads")
+
+if "demo" in MODULES:
+    DEMO_TARGETS = required(config, "demo.targets")
+    if not isinstance(DEMO_TARGETS, list) or not DEMO_TARGETS:
+        raise ValueError("demo.targets must be a nonempty list")
+    TARGETS += DEMO_TARGETS
+
+if "wgs" in MODULES:
+    WGS = required(config, "wgs")
+    REFERENCE = required(config, "reference.fasta")
+    REFERENCE_DICT = required(config, "reference.dict")
+    SAMPLES = manifest(required(WGS, "samples"), ("sample", "r1", "r2", "mean_depth"), "sample")
+    for sample, row in SAMPLES.items():
+        safe_name(sample, "sample")
+        value = float(row["mean_depth"])
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(f"Invalid manifest mean_depth for {sample}")
+    CALL_SAMPLES = [s for s, row in SAMPLES.items() if float(row["mean_depth"]) > 10]
+    if not CALL_SAMPLES:
+        raise ValueError("WGS requires >=1 manifest sample with mean_depth >10; stage the cohort explicitly")
+    TRIM_STEPS = required(WGS, "trimmomatic_steps")
+    if not isinstance(TRIM_STEPS, list) or not TRIM_STEPS or not all(isinstance(x, str) and x for x in TRIM_STEPS):
+        raise ValueError("wgs.trimmomatic_steps must explicitly supply the unreported trimming parameters")
+    MISSING_POLICY = required(WGS, "missing_annotation_policy")
+    if MISSING_POLICY not in {"pass", "fail"}:
+        raise ValueError("Choose wgs.missing_annotation_policy: pass or fail (unreported in paper)")
+    TARGETS += ["results/wgs/cohort.pass.snps.vcf.gz", "results/wgs/cohort.pass.snps.vcf.gz.tbi",
+                "results/wgs/cohort.pass.indels.vcf.gz", "results/wgs/cohort.pass.indels.vcf.gz.tbi"]
+    TARGETS += expand("results/wgs/coverage/{sample}.json", sample=SAMPLES)
+    TARGETS += expand("results/wgs/fastqc/{sample}_{mate}_fastqc.html", sample=SAMPLES, mate=["R1", "R2"])
+
+if {"population", "selection"} & set(MODULES):
+    ANALYSIS = required(config, "analysis")
+    SOURCE_VCF = required(ANALYSIS, "vcf")
+    CONTIG_MAP = required(ANALYSIS, "contig_map")
+    AUTOSOMES = required(ANALYSIS, "autosomes")
+    if not isinstance(AUTOSOMES, list) or not AUTOSOMES:
+        raise ValueError("analysis.autosomes must explicitly list PLINK-compatible chromosome names")
+    if len(set(map(str, AUTOSOMES))) != len(AUTOSOMES) or any(str(x) not in {str(i) for i in range(1, 27)} for x in AUTOSOMES):
+        raise ValueError("After renaming, sheep autosomes must be unique chromosome labels in 1..26")
+    AUTOSOMES = ",".join(map(str, AUTOSOMES))
+    POPULATIONS = manifest(required(ANALYSIS, "populations"), ("population", "keep"), "population")
+    for population in POPULATIONS:
+        safe_name(population, "population")
+    TARGETS += ["results/analysis/cohort_validation.json"]
+
+if "population" in MODULES:
+    POP_CONFIG = required(config, "population")
+    UNRELATED_KEEP = required(POP_CONFIG, "unrelated_keep")
+    UNRELATED_INDIVIDUALS = sorted(read_ids(UNRELATED_KEEP, 2))
+    for individual in UNRELATED_INDIVIDUALS:
+        safe_name(individual, "unrelated sample ID")
+    # No automatic removal rule: the paper does not define which relative to discard.
+    TARGETS += ["results/population/pruned.bed", "results/population/pruned.bim", "results/population/pruned.fam",
+                "results/population/ibs.mdist", "results/population/ibs.mdist.id", "results/population/heterozygosity.het"]
+    TARGETS += expand("results/population/pi/{population}.windowed.pi", population=POPULATIONS)
+    TARGETS += expand("results/population/individual_pi/{individual}.windowed.pi", individual=UNRELATED_INDIVIDUALS)
+    ROH_ENABLED = bool(POP_CONFIG.get("roh", {}).get("enabled", False))
+    if ROH_ENABLED:
+        required(POP_CONFIG, "roh.resolution_note")
+        ROH_ARGS = required(POP_CONFIG, "roh.resolved_args")
+        if not isinstance(ROH_ARGS, list) or not ROH_ARGS:
+            raise ValueError("population.roh.resolved_args must be an explicit argument list")
+        if "--homozyg-window-kb" in ROH_ARGS:
+            raise ValueError("Paper --homozyg-window-kb is not documented by PLINK 1.9; resolve explicitly")
+        TARGETS += ["results/population/roh.hom", "results/population/roh.hom.indiv"]
+    LD_ENABLED = bool(POP_CONFIG.get("ld", {}).get("enabled", False))
+    if LD_ENABLED:
+        for name, row in POPULATIONS.items():
+            if not row.get("ld_keep"):
+                raise ValueError(f"Provide a three-sample ld_keep list for population {name}")
+        TARGETS += expand("results/population/ld/{population}.stat.gz", population=POPULATIONS)
+
+if "selection" in MODULES:
+    SEL_CONFIG = required(config, "selection")
+    FST_WINDOW = positive_integer(required(SEL_CONFIG, "fst_window_bp"), "selection.fst_window_bp")
+    FST_STEP = positive_integer(required(SEL_CONFIG, "fst_step_bp"), "selection.fst_step_bp")
+    required(SEL_CONFIG, "fst_step_resolution")
+    if FST_STEP > FST_WINDOW:
+        raise ValueError("selection.fst_step_bp cannot exceed fst_window_bp")
+    COMPARISONS = required(SEL_CONFIG, "comparisons")
+    if not isinstance(COMPARISONS, dict) or not COMPARISONS:
+        raise ValueError("selection.comparisons must map names to [population_a, population_b]")
+    for name, pair in COMPARISONS.items():
+        safe_name(name, "comparison")
+        if not isinstance(pair, list) or len(pair) != 2 or pair[0] == pair[1] or any(p not in POPULATIONS for p in pair):
+            raise ValueError(f"Comparison {name} must name two distinct populations from the manifest")
+    TARGETS += expand("results/selection/fst/{comparison}.windowed.weir.fst", comparison=COMPARISONS)
+    GLOBAL_FST = SEL_CONFIG.get("global_fst", False)
+    if not isinstance(GLOBAL_FST, bool):
+        raise ValueError("selection.global_fst must be true or false")
+    if GLOBAL_FST:
+        if len(POPULATIONS) < 2:
+            raise ValueError("selection.global_fst requires at least two populations")
+        TARGETS += ["results/selection/global_fst.windowed.weir.fst"]
+    TARGETS += expand("results/selection/pi/{population}.windowed.pi", population=POPULATIONS)
+
+rule all:
+    input: TARGETS
+    default_target: True
+
+if "demo" in MODULES:
+    include: "rules/demo.smk"
+if "wgs" in MODULES:
+    include: "rules/wgs.smk"
+if {"population", "selection"} & set(MODULES):
+    include: "rules/analysis.smk"
+if "population" in MODULES:
+    include: "rules/population.smk"
+if "selection" in MODULES:
+    include: "rules/selection.smk"

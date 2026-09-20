@@ -1,0 +1,30 @@
+{
+  "study_doi": "10.1093/molbev/msab353",
+  "exact_study_revisions_known": false,
+  "dependencies": [
+    {
+      "name": "SFS-scripts",
+      "url": "https://github.com/marqueda/SFS-scripts",
+      "script": "vcf2sfs.py",
+      "candidate_revision": "9a6c9218458f2920543b1f6e67baed78657c2d6f",
+      "revision_basis": "Latest commit on or before cited access date 2020-11-12; not proven to be the revision used",
+      "redistribution": "Not bundled; no explicit license identified"
+    },
+    {
+      "name": "EvoGen_course",
+      "url": "https://github.com/genevol-usp/EvoGen_course",
+      "script": "R scripts for pairwise FST",
+      "candidate_revision": "6dd9361e20167ec1bafe28eabaa6087ba36a4854",
+      "revision_basis": "Available commit before cited access date 2021-01-05; exact study file selection unknown",
+      "redistribution": "Not bundled; no explicit license identified"
+    },
+    {
+      "name": "genomics_general",
+      "url": "https://github.com/simonhmartin/genomics_general",
+      "scripts": ["ABBABABAwindows.py", "popgenWindows.py", "VCF_processing/parseVCF.py"],
+      "candidate_revision": "ddcd98648a7b98a1ec43a32568b6469f34837444",
+      "revision_basis": "Latest commit before paper online publication 2021-12-10; exact study revision unknown",
+      "redistribution": "Not bundled; no explicit license identified"
+    }
+  ]
+}

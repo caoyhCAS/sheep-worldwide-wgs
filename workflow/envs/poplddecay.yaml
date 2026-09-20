@@ -1,0 +1,4 @@
+# Portable reconstruction: paper PopLDdecay 3.41.
+channels: [conda-forge, bioconda, nodefaults]
+dependencies:
+  - poplddecay=3.42

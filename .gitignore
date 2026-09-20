@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.snakemake/
+.venv/
+/data/
+/results/
+/logs/
+/external/
+/resources/
+*.bam
+*.bai
+*.cram
+*.crai
+*.fastq.gz
+*.fq.gz
+# Deliberately do not ignore tests/fixtures or all TSV/VCF files.

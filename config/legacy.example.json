@@ -1,0 +1,54 @@
+{
+  "psmc": {
+    "executable": "psmc",
+    "requested_version": "not reported; record local build",
+    "psmcfa": "data/demography/high_depth_sample.psmcfa"
+  },
+  "smcpp": {
+    "executable": "smc++",
+    "requested_version": "1.14.0.dev0",
+    "smc_files": ["data/demography/group.chr1.smc.gz"]
+  },
+  "fastsimcoal": {
+    "executable": "fsc26",
+    "requested_version": "2.6",
+    "template": "data/models/scenario_I.tpl",
+    "estimation": "data/models/scenario_I.est",
+    "observed_sfs": "data/models/scenario_I_DSFS.obs",
+    "seed": 12345
+  },
+  "qpdstat": {
+    "executable": "qpDstat",
+    "requested_version": "ADMIXTOOLS 7.0.1",
+    "parameter_file": "data/introgression/qpDstat.par",
+    "chromosome_26_support_confirmed": false,
+    "supported_build_evidence": "REPLACE after auditing a patched/portable build; stock v7.0.1 ignores numchrom"
+  },
+  "abba": {
+    "executable": "python3",
+    "requested_version": "genomics_general: paper does not report commit; record checkout",
+    "script": "external/genomics_general/ABBABABAwindows.py",
+    "genotypes": "data/introgression/callable.genotypes.gz",
+    "populations_file": "data/introgression/populations.txt",
+    "genotype_format": "diplo",
+    "populations": ["Menz", "recipient", "donor", "outgroup"],
+    "step_bp": 20000,
+    "threads": 1
+  },
+  "popgen": {
+    "executable": "python3",
+    "requested_version": "genomics_general: paper does not report commit; record checkout",
+    "script": "external/genomics_general/popgenWindows.py",
+    "genotypes": "data/introgression/callable.genotypes.gz",
+    "populations_file": "data/introgression/populations.txt",
+    "genotype_format": "diplo",
+    "populations": ["donor", "recipient"],
+    "step_bp": 20000,
+    "threads": 1
+  },
+  "smartpca": {
+    "executable": "smartpca",
+    "requested_version": "EIGENSOFT 6.0.1",
+    "parameter_file": "data/structure/smartpca.par"
+  }
+}

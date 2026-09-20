@@ -1,0 +1,5 @@
+# Portable reconstruction: paper VCFtools is written as v0.1.17 / v1.17.
+channels: [conda-forge, bioconda, nodefaults]
+dependencies:
+  - bcftools=1.20
+  - vcftools=0.1.16

@@ -1,0 +1,6 @@
+# Synthetic, deterministic smoke test only. Does not reproduce biological results.
+modules: [demo]
+threads: 1
+demo:
+  targets:
+    - results/demo/provenance.json
